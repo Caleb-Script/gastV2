@@ -1,0 +1,134 @@
+# Copyright (C) 2023 - present Juergen Zimmermann, Hochschule Karlsruhe
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+# Aufruf:   docker compose up gast
+#           docker compose exec gast bash
+#             id
+#             ps -ef
+#             env
+#             ls -l /layers
+#             ls -l
+#             pwd
+#             hostname
+#             cat /etc/os-release
+#           docker compose down
+
+# https://docs.docker.com/compose/compose-file
+# https://docs.docker.com/compose/compose-file/compose-file-v3
+# https://github.com/compose-spec/compose-spec/blob/master/schema/compose-spec.json
+
+# https://docs.docker.com/compose/compose-file/14-include
+include:
+  - path:
+    - ../postgres/compose.yml
+    #- ../mysql/compose.yml
+    #- ../oracle/compose.yml
+    - ../keycloak/compose.yml
+    - ../zipkin/compose.yml
+    - ../fakesmtp/compose.yml
+
+# https://docs.docker.com/compose/compose-file/05-services
+services:
+  # https://stackoverflow.com/questions/76345884/how-to-select-specific-services-of-docker-compose-when-using-spring-boot-docker
+  gast:
+    image: juergenzimmermann/gast:2024.04.1-buildpacks-bellsoft
+    #image: juergenzimmermann/gast:2024.04.1-buildpacks-eclipse
+    #image: juergenzimmermann/gast:2024.04.1-buildpacks-azul
+    #image: juergenzimmermann/gast:2024.04.1-eclipse
+    #image: juergenzimmermann/gast:2024.04.1-azul
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - published: 8080
+        target: 8080
+        protocol: tcp
+    volumes:
+      - type: bind
+        source: ..\..\..\src\main\resources\application.yml
+        #source: application.mysql.yml
+        target: /workspace/BOOT-INF/classes/application.yml
+        # Image durch Dockerfile statt Buildpacks:
+        #target: /workspace/application.yml
+        read_only: true
+      - type: bind
+        source: ..\..\..\src\main\resources\private-key.pem
+        target: /workspace/BOOT-INF/classes/private-key.pem
+        # Image durch Dockerfile statt Buildpacks:
+        #target: /workspace/private-key.pem
+        read_only: true
+      - type: bind
+        source: ..\..\..\src\main\resources\certificate.crt
+        target: /workspace/BOOT-INF/classes/certificate.crt
+        # Image durch Dockerfile statt Buildpacks:
+        #target: /workspace/certificate.crt
+        read_only: true
+      - type: bind
+        source: C:\Zimmermann\volumes\gast-v1
+        target: /tmp
+    # https://docs.docker.com/compose/environment-variables/set-environment-variables
+    env_file: .env
+    #env_file: .mysql.env
+    #env_file: .oracle.env
+    #env_file: .h2.env
+    hostname: gast
+    # https://docs.docker.com/compose/compose-file/compose-file-v3/#cap_add-cap_drop
+    cap_drop: [ ALL ]
+    deploy:
+      # https://docs.docker.com/compose/compose-file/deploy/#resources
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: 1G
+        reservations:
+          cpus: "1.0"
+          memory: 768M
+      # https://docs.docker.com/compose/compose-file/deploy/#replicas
+      #replicas: 2
+      #endpoint_mode: vip
+
+  bestellung:
+    image: juergenzimmermann/bestellung:2024.04.0-buildpacks
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - published: 8081
+        target: 8080
+        protocol: tcp
+    profiles: [ bestellung ]
+    volumes:
+      - type: bind
+        source: src\main\resources\application.yml
+        target: /workspace/BOOT-INF/classes/application.yml
+        read_only: true
+      - type: bind
+        source: C:\Zimmermann\volumes\bestellung
+        target: /tmp
+    env_file: ./bestellung/.env
+    #env_file: ./bestellung/.mysql.env
+    #env_file: ./bestellung/.oracle.env
+    #env_file: ./bestellung/.h2.env
+    hostname: bestellung
+    # https://docs.docker.com/compose/compose-file/compose-file-v3/#cap_add-cap_drop
+    cap_drop: [ ALL ]
+    deploy:
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: 1G
+        reservations:
+          cpus: "1.0"
+          memory: 768M

@@ -1,0 +1,95 @@
+@startuml GastWriteController
+
+skinparam classAttributeIconSize 0
+
+package org.springframework {
+package stereotype {
+        interface "@Controller" as Controller
+    }
+
+    package web.bind.annotation {
+        interface "@RequestMapping" as RequestMapping
+        interface "@PathVariable" as PathVariable
+        interface "@RequestBody" as RequestBody
+        interface "@ExceptionHandler" as ExceptionHandler
+    }
+
+    package http {
+        class ResponseEntity<T>
+        class ProblemDetail
+
+        package converter {
+            class HttpMessageNotReadableException
+        }
+
+        ResponseEntity .[hidden].> ProblemDetail
+        ProblemDetail .[hidden].> HttpMessageNotReadableException
+    }
+}
+
+package jakarta.servlet.http {
+    interface HttpServletRequest
+}
+
+package java.util {
+    interface Collection<T>
+    class UUID
+
+    UUID .up[hidden].> Collection
+    Collection .up[hidden].> HttpServletRequest
+}
+
+package com.acme.gast {
+    package service {
+        class GastWriteService << control >> << @Service >>
+
+        class ConstraintViolationsException
+        class EmailExistsException
+    }
+
+    package controller #DDDDDD {
+        package patch {
+            class PatchOperation <<entity>>
+        }
+
+        class GastDTO <<entity>>
+
+        class GastWriteController << boundary >> << @Controller >> << @RequestMapping >> {
+            + @PostMapping post(@RequestBody GastDTO: GastDTO, request: HttpServletRequest): ResponseEntity<Void>
+            + @PutMapping put(@PathVariable id: UUID, @RequestBody GastDTO: GastDTO)
+            + @PatchMapping patch(@PathVariable id: UUID, @RequestBody patchOps: Collection<PatchOperation>)
+            + @DeleteMapping deleteById(@PathVariable id: UUID)
+            + @ExceptionHandler onConstraintViolations(ex: ConstraintViolationsException, req: HttpServletRequest): ResponseEntity<ProblemDetail>
+            + @ExceptionHandler onEmailExists(ex: EmailExistsException, req: HttpServletRequest): ResponseEntity<ProblemDetail>
+            + @ExceptionHandler onMessageNotReadable(ex: HttpMessageNotReadableException, req: HttpServletRequest): ResponseEntity<ProblemDetail>
+        }
+
+        GastWriteController o-down-> "1" GastWriteService : service
+        GastWriteController ..> GastDTO
+        GastWriteController ..> ConstraintViolationsException
+        GastWriteController ..> EmailExistsException
+        GastWriteController ..> PatchOperation
+
+        GastWriteController .up.> ResponseEntity
+        GastWriteController .up.> ProblemDetail
+        GastWriteController .up.> HttpMessageNotReadableException
+        GastWriteController .right.> HttpServletRequest
+
+        GastWriteController .up.> Controller
+        GastWriteController .up.> RequestMapping
+        GastWriteController .up.> PathVariable
+        GastWriteController .up.> RequestBody
+        GastWriteController .up.> ExceptionHandler
+
+        GastWriteController .right.> UUID
+        GastWriteController .right.> Collection
+
+        PatchOperation .[hidden].> GastWriteService
+    }
+}
+
+hide empty members
+
+footer (c) Caleb Gyamfi
+
+@enduml

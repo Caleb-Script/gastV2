@@ -1,0 +1,40 @@
+@startuml GastWriteService
+
+skinparam classAttributeIconSize 0
+
+package org.springframework.stereotype {
+    interface Service
+}
+
+package java.util {
+    class UUID
+}
+
+package com.acme.gast {
+    package entity {
+        class Gast << entity >>
+    }
+
+    package repository {
+        class GastRepository << control >> << @Repository >>
+    }
+
+    package service #DDDDDD {
+        class GastWriteService << control >> << @Service >> {
+            + create(gast: Gast): Gast
+            + update(gast: Gast, id: UUID)
+            + deleteById(id: UUID)
+        }
+
+        GastWriteService o--> "1" GastRepository : repo
+        GastWriteService .right.> Gast
+        GastWriteService .up.> Service
+        GastWriteService .up.> UUID
+    }
+}
+
+hide empty members
+
+footer (c) Caleb Gyamfi
+
+@enduml

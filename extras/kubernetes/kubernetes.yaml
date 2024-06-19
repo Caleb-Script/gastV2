@@ -1,0 +1,224 @@
+
+---
+# https://kubernetes.io/docs/concepts/configuration/configmap
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: gast
+  namespace: acme
+data:
+  # Key-Value-Paare (hier: fuer die Umgebungsvariable)
+  TZ: Europe/Berlin
+  SPRING_PROFILES_ACTIVE: dev
+  SPRING_OUTPUT_ANSI_ENABLED: NEVER
+  APPLICATION_LOGLEVEL: trace
+  SERVER_SSL_ENABLED: "false"
+  SERVER_HTTP2_ENABLED: "false"
+  SERVER_TOMCAT_BASEDIR: /tmp
+
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: gast
+  namespace: acme
+spec:
+  # Spezifikation, auf welche Pods die NetworkPolicy angewendet wird
+  podSelector:
+    matchLabels:
+      app: gast
+      app.kubernetes.io/name: gast
+      app.kubernetes.io/instance: gast
+  policyTypes: [Ingress, Egress]
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: gast
+  labels:
+    app: gast
+    app.kubernetes.io/name: gast
+    app.kubernetes.io/instance: gast
+    app.kubernetes.io/version: 1.0.0
+    app.kubernetes.io/managed-by: kubectl
+    app.kubernetes.io/component: microservice
+    app.kubernetes.io/part-of: acme
+spec:
+  # Selektion der Pods fuer eingehende Requests
+  selector:
+    app: gast
+    app.kubernetes.io/name: gast
+    app.kubernetes.io/instance: gast
+  ports:
+    - port: 8080
+      name: http-service
+      targetPort: http
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: acme-ingress
+  namespace: acme
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: kubernetes.docker.internal
+      http:
+        paths:
+          - path: /gaeste(/|$)(.*)
+            #pathType: Prefix
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: gast
+                port:
+                  name: http-svc
+                  #number: 8080
+  tls:
+    - hosts: [kubernetes.docker.internal]
+      secretName: acme-tls
+
+---
+apiVersion: apps/v1
+kind: Deployment
+# Beschreibung des Deplyoments ("Metadaten")
+metadata:
+  name: gast
+  labels:
+    app: gast
+    app.kubernetes.io/name: gast
+    app.kubernetes.io/instance: gast
+    app.kubernetes.io/version: 1.0.0
+    app.kubernetes.io/managed-by: kubectl
+    app.kubernetes.io/component: microservice
+    app.kubernetes.io/part-of: acme
+  namespace: acme
+spec:
+  selector:
+    matchLabels:
+      app: gast
+      app.kubernetes.io/name: gast
+      app.kubernetes.io/instance: gast
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: gast
+        app.kubernetes.io/name: gast
+        app.kubernetes.io/instance: gast
+        app.kubernetes.io/version: 1.0.0
+        app.kubernetes.io/managed-by: kubectl
+        app.kubernetes.io/component: microservice
+        app.kubernetes.io/part-of: acme
+    spec:
+      containers:
+        - image: calebgyamfi/gast:2024.04.0-buildpacks
+          # default
+          imagePullPolicy: IfNotPresent
+          name: gast
+          envFrom:
+            - configMapRef:
+                name: gast
+          ports:
+            - containerPort: 8080
+              name: http
+          securityContext:
+            runAsUser: 1000
+            runAsGroup: 1000
+            runAsNonRoot: true
+            privileged: false
+            allowPrivilegeEscalation: false
+            seccompProfile:
+              type: RuntimeDefault
+            seLinuxOptions: {}
+            capabilities:
+              drop: [all]
+          resources:
+            requests:
+              cpu: 500m
+              memory: 768Mi
+              ephemeral-storage: 64Mi
+            limits:
+              cpu: 600m
+              memory: 768Mi
+              ephemeral-storage: 64Mi
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: http
+            # Anzahl Sekunden, bis die Probe fuer Liveness abgesetzt wird
+            initialDelaySeconds: 45
+            # default: 1 Sek.
+            timeoutSeconds: 15
+            # periodischer Abstand zwischen den Proben (default: 10 Sek.)
+            periodSeconds: 120
+            # max. Anzahl an Fehlversuchen (default: 3)
+            failureThreshold: 1
+            terminationGracePeriodSeconds: 5
+          # Ist der Container "ready", um Requests zu beantworten? Sind Nachbarsysteme, z.B. DB-Server, ebenfalls "ready"?
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: http
+            # Anzahl Sekunden, bis die Probe fuer Readiness abgesetzt wird
+            initialDelaySeconds: 45
+            # default: 1 Sek.
+            timeoutSeconds: 15
+            # periodischer Abstand zwischen den Proben (default: 10 Sek.)
+            periodSeconds: 120
+            # max. Anzahl an Fehlversuchen (default: 3)
+            failureThreshold: 1
+          volumeMounts:
+            - mountPath: /tmp
+              name: log-gast-v1
+            - mountPath: /workspace/BOOT-INF/classes/private-key.pem
+              name: private-key-gast
+              readOnly: true
+            - mountPath: /workspace/BOOT-INF/classes/certificate.crt
+              name: certificate-gast
+              readOnly: true
+      serviceAccountName: gast
+      automountServiceAccountToken: false
+      volumes:
+        - name: log-gast-v1
+          # https://kubernetes.io/docs/concepts/storage/volumes/#hostpath
+          hostPath:
+            path: /Users/gentlebookpro/Projekte/SWA/Zimmermann/volumes/gast-v0
+            type: Directory
+          # https://kubernetes.io/docs/concepts/storage/volumes/#emptydir
+          #emptyDir: {}
+        - name: private-key-gast
+          hostPath:
+            path: /Users/gentlebookpro/Projekte/SWA/gast-v0/gast/src/main/resources/private-key.pem
+            type: File
+        - name: certificate-gast
+          hostPath:
+            path: /Users/gentlebookpro/Projekte/SWA/gast-v0/gast/src/main/resources/certificate.crt
+            type: File
+
+---
+# https://kubernetes.io/docs/tasks/run-application/configure-pdb
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: gast
+  labels:
+    app: gast
+    app.kubernetes.io/name: gast
+    app.kubernetes.io/instance: gast
+    app.kubernetes.io/version: 1.0.0
+    app.kubernetes.io/managed-by: kubectl
+    app.kubernetes.io/component: microservice
+    app.kubernetes.io/part-of: acme
+  namespace: acme
+spec:
+  # minAvailable: 1
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: gast
+      app.kubernetes.io/name: gast
+      app.kubernetes.io/instance: gast

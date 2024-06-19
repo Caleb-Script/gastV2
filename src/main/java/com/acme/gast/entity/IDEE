@@ -1,0 +1,194 @@
+package com.acme.gast.entity;
+
+import jakarta.persistence.*;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.*;
+import lombok.*;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
+import org.hibernate.validator.constraints.UniqueElements;
+
+import java.net.URL;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.UUID;
+
+/**
+ * Diese Klasse repräsentiert einen Hotelgast mit verschiedenen Attributen wie Name, E-Mail, VIP-Status, Treuestufe,
+ * Geburtsdatum, Geschlecht, Präferenzen, Zimmerinformationen, Buchungshistorie sowie Erstellung- und Aktualisierungszeitstempel.
+ * Die Klasse enthält auch Validierungen für die Eingabefelder, um sicherzustellen, dass gültige Daten eingegeben werden.
+ *
+ * @author <a href="mailto:Caleb_G@outlook.de">Caleb Gyamfi</a>
+ */
+
+
+@Builder
+@EqualsAndHashCode(onlyExplicitlyIncluded = true, callSuper = false)
+@Getter
+@Setter
+@ToString
+public class Gast {
+    /**
+     * Muster für einen gültigen Nachnamen.
+     */
+    public static final String NACHNAME_PATTERN =
+            "(o'|von|von der|von und zu|van)?[A-ZÄÖÜ][a-zäöüß]+(-[A-ZÄÖÜ][a-zäöüß]+)?";
+    /**
+     * Muster für einen gültigen Vornamen.
+     */
+    public static final String VORNAME_PATTERN =
+            "[A-ZÄÖÜ][a-zäöüß]+(-[A-ZÄÖÜ][a-zäöüß]+)?";
+    /**
+     * Minimaler Wert für eine Kategorie.
+     */
+    public static final long MIN_RANG = 0L;
+    /**
+     * Maximaler Wert für eine Kategorie.
+     */
+    public static final long MAX_RANG = 9L;
+    /**
+     * Maximale Länge für den Nachnamen, Vornamen und die Homepage.
+     */
+    private static final int NAME_MAX_LAENGE = 40;
+    private static final int EMAIL_MAX_LAENGE = 40;
+    private static final int HOMEPAGE_MAX_LAENGE = 40;
+    /**
+     * Die ID vom Gast als UUID.
+     */
+    @EqualsAndHashCode.Include
+    private UUID id;
+    /**
+     * Der Nachname des Gasts.
+     */
+    @NotNull(message = "Der Nachname fehlt")
+    @Pattern(regexp = NACHNAME_PATTERN)
+    @Size(max = NAME_MAX_LAENGE)
+    private String nachname;
+    /**
+     * Der Vorname des Gasts.
+     */
+    @NotNull(message = "Der Vornamen fehlt")
+    @Pattern(regexp = VORNAME_PATTERN)
+    @Size(max = NAME_MAX_LAENGE)
+    private String vorname;
+    /**
+     * Die E-Mail-ZimmerInformation des Gasts.
+     */
+    @Email
+    @NotNull(message = "Die Email fehlt")
+    @Size(max = EMAIL_MAX_LAENGE)
+    private String email;
+    /**
+     * Gibt an, ob der Gast ein VIP ist.
+     */
+    private Boolean istVip;
+    /**
+     * Stufe oder Status des Gastes im Treueprogramm des Hotels.
+     */
+    @Max(value = MAX_RANG, message = "Der Rang darf maximal {value} sein")
+    @Min(value = MIN_RANG, message = "Der Rang darf nicht kleiner als {value} sein")
+    private int rang;
+    /**
+     * Das Geburtsdatum des Gasts.
+     */
+    @Past
+    @NotNull
+    private LocalDate geburtsdatum;
+    /**
+     * URL zum Portfolio des Gasts.
+     */
+    @Column(length = HOMEPAGE_MAX_LAENGE)
+    private URL homepage;
+    /**
+     * Geschlecht des Gasts.
+     */
+    @NotNull(message = "Kein Geschlecht angegeben")
+    private GeschlechtTyp geschlecht;
+
+    /**
+     * Die Liste der präferenzen des Gasts.
+     */
+    @UniqueElements(message = "{value} darf nicht doppelt vorkommen")
+    @ToString.Exclude
+    private List<PraeferenzTyp> praeferenzen;
+
+
+    /**
+     * Die Zimmerinformation des Gasts.
+     */
+    @Valid
+    @NotNull
+    @ToString.Exclude
+    private ZimmerInformation zimmerInfo;
+
+    /**
+     * Buchungshistorie des Gasts.
+     */
+    @ToString.Exclude
+    private List<Buchung> buchungen;
+
+    /**
+     * Erstellungszeitstempel des Gasts.
+     */
+    @CreationTimestamp
+    private LocalDateTime erstellt;
+
+    /**
+     * Aktualisierungszeitstempel des Gasts.
+     */
+    @UpdateTimestamp
+    private LocalDateTime aktualisiert;
+
+
+    /**
+     * Überschreiben von Passagierdaten.
+     *
+     * @param gast Neue Passagierdaten.
+     */
+    public void setzen(final Gast gast) {
+        nachname = gast.nachname;
+        vorname = gast.vorname;
+        email = gast.email;
+        istVip = gast.istVip;
+        rang = gast.rang;
+        geburtsdatum = gast.geburtsdatum;
+        homepage = gast.homepage;
+        geschlecht = gast.geschlecht;
+    }
+}
+
+
+package com.acme.gast.entity;
+
+import lombok.*;
+import jakarta.validation.constraints.*;
+import org.hibernate.annotations.CreationTimestamp;
+
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+
+/**
+ * Diese Klasse repräsentiert eine Buchung.
+ *
+ * @author <a href="mailto:Caleb_G@outlook.de">Caleb Gyamfi</a>
+ */
+@Getter
+@Setter
+@ToString
+@Builder
+public class Buchung {
+
+    /**
+     * Das Datum und die Uhrzeit der Buchung.
+     */
+    @CreationTimestamp
+    private LocalDateTime buchungsdatum;
+
+    /**
+     * Der Betrag der Buchung.
+     */
+    @Positive(message = "Der Betrag muss größer als 0 sein")
+    private BigDecimal betrag;
+}
+

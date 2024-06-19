@@ -1,0 +1,70 @@
+@startuml Gast
+
+skinparam classAttributeIconSize 0
+' skinparam monochrome true
+
+package java {
+    package util {
+        interface List<T>
+        class URL
+    }
+
+    package time {
+        class LocalDate
+
+        LocalDate .right[hidden].> List
+    }
+}
+
+package org.springframework.hateoas {
+    class RepresentationModel<T>
+
+    URL .right[hidden].> RepresentationModel
+}
+
+package com.acme.gast {
+    package entity {
+        class Gast
+        class Buchung
+        class ZimmerInformation
+        enum GeschlechtType
+        enum PraeferenzTyp
+        enum ZimmerTyp
+    }
+
+    package controller #DDDDDD {
+        class GastModel << entity >> {
+        nachname : String
+        vorname : String
+        email : String
+        rang : int
+        istVip : boolean
+        geburtsdatum: LocalDate
+        homepage: URL
+        geschlecht: GeschlechtTyp
+        praeferenzen: List<PraeferenzTyp>
+
+        GastModel(gast: Gast)
+        }
+
+        GastModel *--> "0..1" Buchung : buchungen
+        GastModel *--> "1" ZimmerInformation : zimmerInformation
+        GastModel ..> GeschlechtTyp
+        GastModel ..> InteresseTyp
+        GastModel -up-|> RepresentationModel
+
+        GastModel ..> Gast
+        
+        ZimmerInformation .up.> ZimmerTyp
+
+        GastModel .up.> URL
+        GastModel .up.> LocalDate
+        GastModel .up.> List
+    }
+}
+
+hide empty members
+
+footer (c) Caleb Gyamfi
+
+@enduml

@@ -1,0 +1,89 @@
+@startuml Gast
+
+skinparam classAttributeIconSize 0
+' skinparam monochrome true
+
+package java {
+    package util {
+        class UUID
+        interface List<T>
+        class URL
+        class Currency
+    }
+
+    package math {
+        class BigDecimal
+    }
+
+    package time {
+        class LocalDate
+    }
+
+    BigDecimal .up[hidden].> UUID
+    UUID .[hidden].> LocalDate
+}
+
+package com.acme.gast.entity #DDDDDD {
+    class Buchung {
+        betrag: BigDecimal
+        waehrung: Currency
+    }
+
+    class ZimmerInformation {
+        zimmerNummer: String
+        zimmerTyp: ZimmerTyp
+    }
+
+    enum GeschlechtTyp {
+        MAENNLICH
+        WEIBLICH
+        DIVERS
+    }
+
+    enum ZimmerTyp {
+        EINZELZIMMER
+        DOPPELZIMMER
+        SUITE
+    }
+
+    enum PraeferenzTyp {
+        NICHTRAUCHER
+        MEERBLICK
+        BERGBLICK
+        BALKON
+    }
+
+    class Gast << entity >> {
+        id : UUID
+        nachname : String
+        vorname : String
+        email : String
+        rang : int
+        istVip : boolean
+        geburtsdatum: LocalDate
+        homepage: URL
+        geschlecht: GeschlechtTyp
+        praeferenzen: List<PraeferenzTyp>
+    }
+
+    Gast *--> "0..*" Buchung : buchungen
+    Gast *--> "1..n" ZimmerInformation : zimmerInformation
+    Gast .up.> GeschlechtTyp
+    Gast .up.> InteresseType
+
+    Gast ..> UUID
+    Gast ..> LocalDate
+    Gast ..> List
+    Gast ..> URL
+
+    ZimmerInformation .up.> ZimmerTyp
+
+    Buchung ..> Currency
+    Buchung ..> BigDecimal
+}
+
+hide empty members
+
+footer (c) Caleb Gyamfi
+
+@enduml

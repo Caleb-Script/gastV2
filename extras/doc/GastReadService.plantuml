@@ -1,0 +1,47 @@
+@startuml GastReadService
+
+skinparam classAttributeIconSize 0
+
+package org.springframework.stereotype {
+    interface Service
+}
+
+package java.util {
+    interface List<T>
+    interface Map<K,V>
+    class UUID
+
+    UUID .left[hidden].> Service
+}
+
+package com.acme.gast {
+    package entity {
+        class Gast << entity >>
+
+        Gast .up[hidden].> List
+    }
+
+    package repository {
+        class GastRepository << control >> << @Repository >>
+    }
+
+    package service #DDDDDD {
+        class GastReadService << control >> << @Service >> {
+            + findById(id: UUID): Gast
+            + find(queryParams: Map<String, String>): List<Gast>
+        }
+
+        GastReadService o--> GastRepository : repo
+        GastReadService .right.> Gast
+        GastReadService ..> Service
+        GastReadService .up.> UUID
+        GastReadService .up> List
+        GastReadService .up.> Map
+    }
+}
+
+hide empty members
+
+footer (c) Caleb Gyamfi
+
+@enduml
